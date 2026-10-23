@@ -712,12 +712,13 @@ impl Session {
         if active_turn.is_some() {
             return None;
         }
-        let needs_new_turn = self.input_queue.has_trigger_turn_mailbox_items().await;
+        let has_trigger_mail = self.input_queue.has_trigger_turn_mailbox_items().await;
+        let needs_new_turn = has_trigger_mail || self.input_queue.has_pending_background().await;
         if !needs_new_turn && !self.has_outstanding_durable_sleep() {
             return None;
         }
         let active_turn = active_turn.get_or_insert_with(ActiveTurn::default);
-        let previous_options = if needs_new_turn {
+        let previous_options = if has_trigger_mail {
             Default::default()
         } else {
             self.state

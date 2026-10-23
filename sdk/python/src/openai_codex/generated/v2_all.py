@@ -435,6 +435,27 @@ class AutoReviewRequirements(BaseModel):
     required_on_models: Annotated[list[str] | None, Field(alias="requiredOnModels")] = None
 
 
+class BackgroundTaskInfo(BaseModel):
+    model_config = ConfigDict(
+        populate_by_name=True,
+    )
+    command: str
+    completed_at: Annotated[int | None, Field(alias="completedAt")] = None
+    exit_code: Annotated[int | None, Field(alias="exitCode")] = None
+    id: str
+    kind: str
+    label: str
+    output: Annotated[
+        str,
+        Field(
+            description="Bounded output tail. The normal command transcript remains available separately."
+        ),
+    ]
+    process_id: Annotated[str, Field(alias="processId")]
+    started_at: Annotated[int, Field(alias="startedAt")]
+    status: str
+
+
 class BrowserUseAccessApprovalLifetime(Enum):
     turn = "turn"
     thread = "thread"

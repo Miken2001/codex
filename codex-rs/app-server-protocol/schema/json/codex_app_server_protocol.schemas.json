@@ -8175,6 +8175,61 @@
         },
         "type": "object"
       },
+      "BackgroundTaskInfo": {
+        "properties": {
+          "command": {
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "exitCode": {
+            "format": "int32",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "output": {
+            "description": "Bounded output tail. The normal command transcript remains available separately.",
+            "type": "string"
+          },
+          "processId": {
+            "type": "string"
+          },
+          "startedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "command",
+          "id",
+          "kind",
+          "label",
+          "output",
+          "processId",
+          "startedAt",
+          "status"
+        ],
+        "type": "object"
+      },
       "BrowserUseAccessApprovalLifetime": {
         "enum": [
           "turn",

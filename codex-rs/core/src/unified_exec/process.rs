@@ -97,6 +97,8 @@ enum ProcessHandle {
 /// Unified wrapper over directly spawned PTY sessions and exec-server-backed
 /// processes.
 pub(crate) struct UnifiedExecProcess {
+    /// Set after final output and deferred policy checks have been published.
+    pub(super) completion_published: CancellationToken,
     process_handle: ProcessHandle,
     output_tx: broadcast::Sender<Vec<u8>>,
     output: OutputHandles,
@@ -144,6 +146,7 @@ impl UnifiedExecProcess {
 
         Self {
             process_handle,
+            completion_published: CancellationToken::new(),
             output_tx,
             output,
             output_drained,

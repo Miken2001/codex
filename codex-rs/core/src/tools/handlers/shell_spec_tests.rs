@@ -22,6 +22,9 @@ fn exec_command_tool_matches_expected_spec() {
         "Runs a command in a PTY, returning output or a session ID for ongoing interaction."
             .to_string()
     };
+    let description = format!(
+        "{description} For long builds, deployments, and CI waits, set background={{label: ...}} (add monitor=true for watchers). The server resumes this conversation on completion without polling. End your turn while waiting. Background tasks retain normal sandbox and approval policies. Closing the terminal does not stop tasks while the server runs."
+    );
     let yield_time_ms_description = if cfg!(windows) {
         "Maximum time to wait before returning a session ID for a still-running command. Commands that finish sooner return immediately. For ordinary commands, omit this parameter to use the 10000 ms default. Effective range on Windows is 10000-30000 ms."
     } else {
@@ -74,6 +77,13 @@ fn exec_command_tool_matches_expected_spec() {
         /*exec_permission_approvals_enabled*/ false,
     ));
 
+    properties.insert("background".into(), JsonSchema::object(
+        BTreeMap::from([
+            ("label".into(), JsonSchema::string(Some("Short task label.".into()))),
+            ("monitor".into(), JsonSchema::boolean(Some("True for a watcher command. Defaults to false (shell task).".into()))),
+            ("notify_pattern".into(), JsonSchema::string(Some("Optional regex matching complete monitor output lines. Emits deduplicated alerts at most once per 30 seconds. Omit for completion-only notifications.".into()))),
+        ]), None, Some(false.into()),
+    ));
     assert_eq!(
         tool,
         ToolSpec::Function(ResponsesApiTool {

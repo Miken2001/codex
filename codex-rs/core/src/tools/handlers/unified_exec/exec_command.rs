@@ -239,6 +239,17 @@ impl ExecCommandHandler {
                 parse_arguments(&arguments)?
             }
         };
+        if let Some(background) = &args.background {
+            background
+                .validate()
+                .map_err(FunctionCallError::RespondToModel)?;
+            if matches!(self.lifetime, ExecCommandLifetime::OneShot) {
+                return Err(FunctionCallError::RespondToModel(
+                    "Background tasks require unified_exec".into(),
+                ));
+            }
+            args.yield_time_ms = 250;
+        }
         if args.tty && !session.features().enabled(Feature::UnifiedExecTty) {
             return Err(FunctionCallError::RespondToModel(
                 "TTY execution is disabled by config; omit `tty` or set it to false.".to_string(),
@@ -287,6 +298,7 @@ impl ExecCommandHandler {
                 .map_err(FunctionCallError::RespondToModel)?;
         let command = resolved_command.command;
         let ExecCommandArgs {
+            background,
             mut tty,
             yield_time_ms,
             timeout_ms,
@@ -430,7 +442,17 @@ impl ExecCommandHandler {
             None => manager.exec_command(request, &context).await,
         };
         match result {
-            Ok(response) => Ok(boxed_tool_output(response)),
+            Ok(mut response) => {
+                if let Some(options) = background
+                    && let Some(id) = response.process_id
+                {
+                    match manager.background(&session, id, options).await {
+                        Ok(()) => response.raw_output.extend_from_slice(b"\nBackground task registered. Completion will automatically resume this conversation. Do not poll; finish your turn while waiting. Use background_tasks to inspect or stop it on request.\n"),
+                        Err(error) => response.raw_output.extend_from_slice(format!("\nThe command started, but automatic background supervision could not be registered: {error}. The session ID above remains valid; do not start the command again.\n").as_bytes()),
+                    }
+                }
+                Ok(boxed_tool_output(response))
+            }
             Err(UnifiedExecError::SandboxDenied {
                 output,
                 original_token_count,
@@ -476,9 +498,13 @@ fn one_shot_exec_command_spec(spec: ToolSpec) -> ToolSpec {
         "Runs a command to completion and returns its output. The process is terminated on timeout or cancellation and cannot be resumed.",
         1,
     );
+    if let Some(index) = spec.description.find(" For long builds,") {
+        spec.description.truncate(index);
+    }
     let properties = spec.parameters.properties.get_or_insert_default();
     properties.remove("tty");
     properties.remove("yield_time_ms");
+    properties.remove("background");
     properties.insert(
         "timeout_ms".to_string(),
         JsonSchema::number(Some(

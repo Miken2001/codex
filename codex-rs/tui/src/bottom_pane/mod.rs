@@ -121,6 +121,7 @@ pub(crate) use request_user_input::RequestUserInputOverlay;
 pub(crate) use status_line_style::status_line_from_segments;
 pub(crate) use voice_strip::VoiceStripPhase;
 pub(crate) use voice_strip::VoiceStripState;
+pub(crate) mod background_tasks;
 mod bottom_pane_view;
 mod composer_gap;
 mod effort_ignition;
@@ -1753,6 +1754,12 @@ impl BottomPane {
             self.sync_status_inline_message();
             self.request_redraw();
         }
+    }
+
+    pub(crate) fn set_background_monitor_count(&mut self, monitors: usize) {
+        self.unified_exec_footer.monitors = monitors;
+        self.sync_status_inline_message();
+        self.request_redraw();
     }
 
     /// Update hook activity after the lifecycle reveal delay, even outside a turn.
@@ -3603,7 +3610,7 @@ mod tests {
 
         let area = Rect::new(0, 0, width, after);
         let rendered = render_snapshot(&pane, area);
-        assert!(rendered.contains("background terminal running · /ps to view"));
+        assert!(rendered.contains("1 shell · 0 monitor · /tasks to view"));
     }
 
     #[test]

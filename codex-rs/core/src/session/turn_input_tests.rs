@@ -90,6 +90,28 @@ async fn submit_start_only(
     .expect("start-only submission should be valid")
 }
 
+#[tokio::test]
+async fn background_results_wait_for_idle_and_batch_without_cross_thread_delivery() {
+    let (session, _turn) = make_session_and_context().await;
+    let (other, _) = make_session_and_context().await;
+    let first = TurnInput::ResponseItem(user_message("task one completed").into());
+    let second = TurnInput::ResponseItem(user_message("task two completed").into());
+    session.input_queue.enqueue_background(first.clone()).await;
+    session.input_queue.enqueue_background(second.clone()).await;
+    *session.active_turn.lock().await = Some(crate::state::ActiveTurn::default());
+    assert!(session.reserve_pending_work_turn().await.is_none());
+    assert!(session.input_queue.has_pending_background().await);
+    assert!(!other.input_queue.has_pending_background().await);
+    *session.active_turn.lock().await = None;
+    assert!(session.reserve_pending_work_turn().await.is_some());
+    assert!(session.reserve_pending_work_turn().await.is_none());
+    assert_eq!(
+        session.input_queue.drain_background().await,
+        vec![first, second]
+    );
+    assert!(!session.input_queue.has_pending_background().await);
+}
+
 async fn submit_steer_only(
     session: &Arc<Session>,
     input: Vec<UserInput>,

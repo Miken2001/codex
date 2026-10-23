@@ -1127,6 +1127,19 @@ pub(crate) enum AppEvent {
         thread_id: Option<ThreadId>,
     },
 
+    OpenBackgroundTasks,
+    RefreshBackgroundTaskCounts {
+        thread_id: ThreadId,
+    },
+    BackgroundTaskCounts {
+        thread_id: ThreadId,
+        monitors: usize,
+    },
+    StopBackgroundTask {
+        thread_id: ThreadId,
+        process_id: String,
+    },
+
     StartMcpLogin {
         name: String,
         thread_id: ThreadId,

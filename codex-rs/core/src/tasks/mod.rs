@@ -458,7 +458,9 @@ impl Session {
         self: &Arc<Self>,
         sub_id: String,
     ) {
-        if !self.input_queue.has_pending_mailbox_items().await {
+        if !self.input_queue.has_pending_mailbox_items().await
+            && !self.input_queue.has_pending_background().await
+        {
             return;
         }
 
@@ -480,8 +482,11 @@ impl Session {
         {
             return;
         }
-        let (input, mut start_options) =
+        let (mut input, mut start_options) =
             self.input_queue.get_pending_input(&self.active_turn).await;
+        let background = self.input_queue.drain_background().await;
+        let has_background = !background.is_empty();
+        input.extend(background);
         if !input.iter().any(
             |item| matches!(item, TurnInput::InterAgentCommunication(mail) if mail.trigger_turn),
         ) {
@@ -491,6 +496,9 @@ impl Session {
                 .reference_context_item()
                 .await
                 .and_then(|context| context.cyber_access_program);
+        }
+        if has_background {
+            start_options.turn_trigger = Some("background_task".to_string());
         }
         let turn_context = self
             .new_turn_with_default_settings(

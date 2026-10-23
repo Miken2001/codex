@@ -319,6 +319,8 @@ async fn is_unloadable(thread: &CodexThread) -> bool {
             | AgentStatus::Interrupted
     ) && thread.session.active_turn.lock().await.is_none()
         && !thread.session.has_outstanding_durable_sleep()
+        && !thread.session.input_queue.has_pending_background().await
+        && thread.list_background_terminals().await.is_empty()
         && !thread
             .session
             .input_queue

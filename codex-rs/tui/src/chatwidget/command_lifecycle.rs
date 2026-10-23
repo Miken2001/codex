@@ -206,6 +206,10 @@ impl ChatWidget {
     }
 
     pub(super) fn sync_unified_exec_footer(&mut self) {
+        if let Some(thread_id) = self.thread_id() {
+            self.app_event_tx
+                .send(crate::app_event::AppEvent::RefreshBackgroundTaskCounts { thread_id });
+        }
         let processes = self
             .unified_exec_processes
             .iter()

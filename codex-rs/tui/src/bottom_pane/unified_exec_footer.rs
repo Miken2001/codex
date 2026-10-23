@@ -16,12 +16,14 @@ use crate::render::renderable::Renderable;
 /// Tracks active unified-exec processes and renders a compact summary.
 pub(crate) struct UnifiedExecFooter {
     processes: Vec<String>,
+    pub(super) monitors: usize,
 }
 
 impl UnifiedExecFooter {
     pub(crate) fn new() -> Self {
         Self {
             processes: Vec::new(),
+            monitors: 0,
         }
     }
 
@@ -48,9 +50,10 @@ impl UnifiedExecFooter {
         }
 
         let count = self.processes.len();
-        let plural = if count == 1 { "" } else { "s" };
+        let monitors = self.monitors.min(count);
+        let shells = count - monitors;
         Some(format!(
-            "{count} background terminal{plural} running · /ps to view · /stop to close"
+            "{shells} shell · {monitors} monitor · /tasks to view · /stop to close"
         ))
     }
 

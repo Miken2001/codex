@@ -96,6 +96,7 @@ pub(crate) struct InputQueue {
     activity_tx: watch::Sender<InputQueueActivity>,
     controller: Option<(ThreadId, Arc<dyn AgentControl>, watch::Receiver<bool>)>,
     mailbox_pending_mails: Mutex<VecDeque<PendingMailboxCommunication>>,
+    background_pending: Mutex<Vec<TurnInput>>,
 }
 
 pub(crate) struct PendingMailboxCommunication {
@@ -111,6 +112,7 @@ impl InputQueue {
             activity_tx,
             controller: None,
             mailbox_pending_mails: Mutex::new(VecDeque::new()),
+            background_pending: Mutex::new(Vec::new()),
         }
     }
 
@@ -224,6 +226,19 @@ impl InputQueue {
                 .controller
                 .as_ref()
                 .is_some_and(|(_, _, updates)| *updates.borrow())
+    }
+
+    /// Background events wait for the next turn; they never preempt active sampling.
+    pub(crate) async fn enqueue_background(&self, input: TurnInput) {
+        self.background_pending.lock().await.push(input);
+    }
+
+    pub(crate) async fn has_pending_background(&self) -> bool {
+        !self.background_pending.lock().await.is_empty()
+    }
+
+    pub(crate) async fn drain_background(&self) -> Vec<TurnInput> {
+        std::mem::take(&mut *self.background_pending.lock().await)
     }
 
     pub(crate) async fn has_trigger_turn_mailbox_items(&self) -> bool {

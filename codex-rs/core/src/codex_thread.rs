@@ -794,6 +794,16 @@ impl CodexThread {
         self.session.terminate_background_terminal(process_id).await
     }
 
+    pub async fn background_tasks(
+        &self,
+    ) -> Vec<codex_protocol::background_tasks::BackgroundTaskInfo> {
+        self.session
+            .services
+            .unified_exec_manager
+            .background_task_list(&self.session)
+            .await
+    }
+
     pub(crate) fn subscribe_status(&self) -> watch::Receiver<AgentStatus> {
         self.io.agent_status.clone()
     }

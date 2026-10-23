@@ -26,6 +26,8 @@ pub use write_stdin::WriteStdinHandler;
 pub(crate) struct ExecCommandArgs {
     pub(crate) cmd: String,
     #[serde(default)]
+    background: Option<crate::unified_exec::background::BackgroundOptions>,
+    #[serde(default)]
     shell: Option<String>,
     #[serde(default)]
     login: Option<bool>,

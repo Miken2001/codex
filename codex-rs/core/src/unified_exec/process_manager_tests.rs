@@ -640,6 +640,7 @@ async fn pruning_does_not_evict_live_process_while_exited_process_is_finalizing(
         store.processes.insert(
             process_id,
             ProcessEntry {
+                background: false,
                 process: if is_exited {
                     Arc::clone(&exited_process)
                 } else {

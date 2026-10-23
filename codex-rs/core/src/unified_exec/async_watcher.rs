@@ -239,6 +239,7 @@ pub(crate) fn spawn_exit_watcher(
             )
             .await;
         }
+        process.completion_published.cancel();
     });
 }
 

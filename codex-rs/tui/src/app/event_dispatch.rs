@@ -1638,6 +1638,81 @@ impl App {
             AppEvent::FetchMcpInventory { detail, thread_id } => {
                 self.fetch_mcp_inventory(app_server, detail, thread_id);
             }
+            AppEvent::OpenBackgroundTasks => {
+                if let Some(thread_id) = self.chat_widget.thread_id() {
+                    use crate::bottom_pane::background_tasks::{BackgroundTasksView, TaskViewState};
+                    let state = Arc::new(std::sync::Mutex::new(TaskViewState::default()));
+                    let cancel = tokio_util::sync::CancellationToken::new();
+                    self.chat_widget.show_background_tasks(BackgroundTasksView::new(
+                        Arc::clone(&state), cancel.clone(), self.app_event_tx.clone(), thread_id,
+                    ));
+                    let handle = app_server.request_handle();
+                    let frame = tui.frame_requester();
+                    let events = self.app_event_tx.clone();
+                    tokio::spawn(async move {
+                        loop {
+                            let request = ClientRequest::ThreadBackgroundTerminalsList {
+                                request_id: codex_app_server_protocol::RequestId::String(format!("tasks-{}", uuid::Uuid::new_v4())),
+                                params: codex_app_server_protocol::ThreadBackgroundTerminalsListParams {
+                                    thread_id: thread_id.to_string(), cursor: None, limit: Some(64),
+                                },
+                            };
+                            let result = tokio::select! {
+                                _ = cancel.cancelled() => return,
+                                result = handle.request_typed::<codex_app_server_protocol::ThreadBackgroundTerminalsListResponse>(request) => result,
+                            };
+                            {
+                                let mut state = state.lock().unwrap_or_else(|e| e.into_inner());
+                                match result {
+                                    Ok(response) => {
+                                        let monitors = response.tasks.iter().filter(|t| t.kind == "monitor" && t.status == "running").count();
+                                        events.send(AppEvent::BackgroundTaskCounts { thread_id, monitors });
+                                        state.tasks = response.tasks; state.error = None;
+                                    }
+                                    Err(error) => state.error = Some(error.to_string()),
+                                }
+                            }
+                            frame.schedule_frame();
+                            tokio::select! {
+                                _ = cancel.cancelled() => return,
+                                _ = tokio::time::sleep(Duration::from_secs(1)) => {}
+                            }
+                        }
+                    });
+                }
+            }
+            AppEvent::RefreshBackgroundTaskCounts { thread_id } => {
+                let handle = app_server.request_handle();
+                let events = self.app_event_tx.clone();
+                tokio::spawn(async move {
+                    // Command-start events precede background registration by a short yield.
+                    tokio::time::sleep(Duration::from_millis(600)).await;
+                    let request = ClientRequest::ThreadBackgroundTerminalsList {
+                        request_id: codex_app_server_protocol::RequestId::String(format!("task-counts-{}", uuid::Uuid::new_v4())),
+                        params: codex_app_server_protocol::ThreadBackgroundTerminalsListParams {
+                            thread_id: thread_id.to_string(), cursor: None, limit: Some(64),
+                        },
+                    };
+                    if let Ok(response) = handle.request_typed::<codex_app_server_protocol::ThreadBackgroundTerminalsListResponse>(request).await {
+                        let monitors = response.tasks.iter().filter(|t| t.kind == "monitor" && t.status == "running").count();
+                        events.send(AppEvent::BackgroundTaskCounts { thread_id, monitors });
+                    }
+                });
+            }
+            AppEvent::BackgroundTaskCounts { thread_id, monitors } => {
+                if self.chat_widget.thread_id() == Some(thread_id) {
+                    self.chat_widget.set_background_monitor_count(monitors);
+                }
+            }
+            AppEvent::StopBackgroundTask { thread_id, process_id } => {
+                let request = ClientRequest::ThreadBackgroundTerminalsTerminate {
+                    request_id: app_server.next_request_id(),
+                    params: codex_app_server_protocol::ThreadBackgroundTerminalsTerminateParams { thread_id: thread_id.to_string(), process_id },
+                };
+                if let Err(error) = app_server.request_handle().request_typed::<codex_app_server_protocol::ThreadBackgroundTerminalsTerminateResponse>(request).await {
+                    self.chat_widget.add_error_message(error.to_string());
+                }
+            }
             AppEvent::StartMcpLogin { name, thread_id } => {
                 if self.pending_mcp_login_start.is_some() {
                     self.chat_widget.add_info_message(

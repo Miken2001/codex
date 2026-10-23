@@ -63,6 +63,7 @@ pub(crate) fn create_exec_command_tool_with_environment_id(
         ),
     ]);
     if include_shell_parameter {
+        // Shared by normal tool calling and the generated code-mode tool catalog.
         properties.insert(
             "shell".to_string(),
             JsonSchema::string(Some(
@@ -92,17 +93,28 @@ pub(crate) fn create_exec_command_tool_with_environment_id(
         options.exec_permission_approvals_enabled,
     ));
 
+    properties.insert("background".into(), JsonSchema::object(
+        BTreeMap::from([
+            ("label".into(), JsonSchema::string(Some("Short task label.".into()))),
+            ("monitor".into(), JsonSchema::boolean(Some("True for a watcher command. Defaults to false (shell task).".into()))),
+            ("notify_pattern".into(), JsonSchema::string(Some("Optional regex matching complete monitor output lines. Emits deduplicated alerts at most once per 30 seconds. Omit for completion-only notifications.".into()))),
+        ]), None, Some(false.into()),
+    ));
+
     ToolSpec::Function(ResponsesApiTool {
         name: "exec_command".to_string(),
-        description: if include_windows_shell_guidance {
-            format!(
-                "Runs a command in a PTY, returning output or a session ID for ongoing interaction.\n\n{}",
-                windows_shell_guidance()
-            )
-        } else {
-            "Runs a command in a PTY, returning output or a session ID for ongoing interaction."
-                .to_string()
-        },
+        description: format!(
+            "{} For long builds, deployments, and CI waits, set background={{label: ...}} (add monitor=true for watchers). The server resumes this conversation on completion without polling. End your turn while waiting. Background tasks retain normal sandbox and approval policies. Closing the terminal does not stop tasks while the server runs.",
+            if include_windows_shell_guidance {
+                format!(
+                    "Runs a command in a PTY, returning output or a session ID for ongoing interaction.\n\n{}",
+                    windows_shell_guidance()
+                )
+            } else {
+                "Runs a command in a PTY, returning output or a session ID for ongoing interaction."
+                    .to_string()
+            }
+        ),
         strict: false,
         defer_loading: None,
         parameters: JsonSchema::object(

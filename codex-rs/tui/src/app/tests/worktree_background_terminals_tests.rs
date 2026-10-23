@@ -58,6 +58,7 @@ fn old_local_daemon_worktree_error_suggests_update() -> Result<()> {
     assert_eq!(
         managed_worktree_creation::background_terminals_blocker(
             Ok(ThreadBackgroundTerminalsListResponse {
+                tasks: Vec::new(),
                 data: Vec::new(),
                 next_cursor: None,
             }),

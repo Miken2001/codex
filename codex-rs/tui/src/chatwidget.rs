@@ -1495,6 +1495,17 @@ impl ChatWidget {
         self.add_to_history(history_cell::new_unified_exec_processes_output(processes));
     }
 
+    pub(crate) fn show_background_tasks(
+        &mut self,
+        view: crate::bottom_pane::background_tasks::BackgroundTasksView,
+    ) {
+        self.bottom_pane.show_view(Box::new(view));
+    }
+
+    pub(crate) fn set_background_monitor_count(&mut self, monitors: usize) {
+        self.bottom_pane.set_background_monitor_count(monitors);
+    }
+
     fn clean_background_terminals(&mut self) {
         self.submit_op(AppCommand::clean_background_terminals());
         self.unified_exec_processes.clear();

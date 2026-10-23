@@ -1259,6 +1259,9 @@ pub struct ThreadBackgroundTerminal {
 #[ts(export_to = "v2/")]
 pub struct ThreadBackgroundTerminalsListResponse {
     pub data: Vec<ThreadBackgroundTerminal>,
+    /// Explicit background jobs, including retained completed/interrupted history.
+    #[serde(default)]
+    pub tasks: Vec<codex_protocol::background_tasks::BackgroundTaskInfo>,
     /// Opaque cursor to pass to the next call to continue after the last item.
     /// If None, there are no more items to return.
     pub next_cursor: Option<String>,

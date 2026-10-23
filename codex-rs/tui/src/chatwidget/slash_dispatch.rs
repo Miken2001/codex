@@ -597,6 +597,9 @@ impl ChatWidget {
             SlashCommand::Ps => {
                 self.add_ps_output();
             }
+            SlashCommand::Tasks => {
+                self.app_event_tx.send(AppEvent::OpenBackgroundTasks);
+            }
             SlashCommand::Stop => {
                 self.clean_background_terminals();
             }
@@ -1274,6 +1277,7 @@ impl ChatWidget {
             | SlashCommand::Usage
             | SlashCommand::DebugConfig
             | SlashCommand::Ps
+            | SlashCommand::Tasks
             | SlashCommand::Stop
             | SlashCommand::MemoryDrop
             | SlashCommand::MemoryUpdate

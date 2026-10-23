@@ -2521,7 +2521,12 @@ impl ThreadRequestProcessor {
 
         let (data, next_cursor) = paginate_background_terminals(&terminals, cursor, limit)?;
 
-        Ok(ThreadBackgroundTerminalsListResponse { data, next_cursor })
+        let tasks = thread.background_tasks().await;
+        Ok(ThreadBackgroundTerminalsListResponse {
+            data,
+            next_cursor,
+            tasks,
+        })
     }
 
     async fn thread_background_terminals_terminate_inner(

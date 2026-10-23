@@ -1241,6 +1241,7 @@ impl UnifiedExecProcessManager {
         let plugin_metrics_sidecar =
             metrics_sidecar.map(|sidecar| Arc::new(std::sync::Mutex::new(Some(sidecar))));
         let entry = ProcessEntry {
+            background: false,
             process: Arc::clone(&process),
             plugin_metrics_sidecar: plugin_metrics_sidecar.clone(),
             call_id: context.call_id.clone(),
@@ -1754,6 +1755,7 @@ impl UnifiedExecProcessManager {
         let mut meta: Vec<(i32, Instant, bool)> = store
             .processes
             .iter()
+            .filter(|(_, entry)| !entry.background || entry.process.has_exited())
             .map(|(id, entry)| (*id, entry.last_used, entry.process.has_exited()))
             .collect();
         let mut found_locked_exited_process = false;
@@ -1820,6 +1822,7 @@ impl UnifiedExecProcessManager {
     }
 
     pub(crate) async fn terminate_all_processes(&self) {
+        self.cancel_background_notification(None).await;
         let entries: Vec<ProcessEntry> = {
             let mut processes = self.process_store.lock().await;
             let entries: Vec<ProcessEntry> = processes
@@ -1867,6 +1870,7 @@ impl UnifiedExecProcessManager {
     }
 
     pub(crate) async fn terminate_process(&self, process_id: i32) -> bool {
+        self.cancel_background_notification(Some(process_id)).await;
         let (process, already_exited) = {
             let store = self.process_store.lock().await;
             let Some(entry) = store.processes.get(&process_id) else {

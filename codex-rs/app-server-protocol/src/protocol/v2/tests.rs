@@ -143,6 +143,7 @@ fn thread_background_terminals_list_response_round_trips_foreign_paths() {
         ("file://server/share/repo", r"\\server\share\repo"),
     ] {
         let response = ThreadBackgroundTerminalsListResponse {
+            tasks: Vec::new(),
             data: vec![ThreadBackgroundTerminal {
                 item_id: "item_123".to_string(),
                 process_id: "42".to_string(),
@@ -166,6 +167,7 @@ fn thread_background_terminals_list_response_round_trips_foreign_paths() {
                 "cpuPercent": null,
                 "rssKb": null,
             }],
+            "tasks": [],
             "nextCursor": null,
         });
 
